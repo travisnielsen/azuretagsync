@@ -1,0 +1,50 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio 15
+VisualStudioVersion = 15.0.27703.2035
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "TagSync.Functions", "TagSync.Functions\TagSync.Functions.csproj", "{7389339F-6826-497B-9697-2F4A8823C81F}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{E51DB2F1-C31D-4A3A-BB65-639DA0C7B33E}"
+	ProjectSection(SolutionItems) = preProject
+		.gitignore = .gitignore
+		README.md = README.md
+	EndProjectSection
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "images", "images", "{0468AFF7-8C57-4358-88BE-BEAB009D734C}"
+	ProjectSection(SolutionItems) = preProject
+		images\add-msi.png = images\add-msi.png
+		images\audit-config-table.png = images\audit-config-table.png
+		images\cd-deployment.png = images\cd-deployment.png
+		images\deploy-function.png = images\deploy-function.png
+		images\invalid-tag-resources.png = images\invalid-tag-resources.png
+		images\local-settings-json.png = images\local-settings-json.png
+	EndProjectSection
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TagSync.Tests", "TagSync.Tests\TagSync.Tests.csproj", "{4AFC736E-DBCC-415E-AC02-B6FE87991C2B}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{7389339F-6826-497B-9697-2F4A8823C81F}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{7389339F-6826-497B-9697-2F4A8823C81F}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{7389339F-6826-497B-9697-2F4A8823C81F}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{7389339F-6826-497B-9697-2F4A8823C81F}.Release|Any CPU.Build.0 = Release|Any CPU
+		{4AFC736E-DBCC-415E-AC02-B6FE87991C2B}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{4AFC736E-DBCC-415E-AC02-B6FE87991C2B}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{4AFC736E-DBCC-415E-AC02-B6FE87991C2B}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{4AFC736E-DBCC-415E-AC02-B6FE87991C2B}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{0468AFF7-8C57-4358-88BE-BEAB009D734C} = {E51DB2F1-C31D-4A3A-BB65-639DA0C7B33E}
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {D0854BC3-EC76-49FC-B9B9-B18766A34403}
+	EndGlobalSection
+EndGlobal
