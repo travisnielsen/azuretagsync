@@ -20,7 +20,7 @@ namespace TagSync.Functions
         static ResourceManagerService _resourceManager;
 
         [FunctionName("AuditResourceGroups")]
-        public static async Task Run([HttpTrigger(AuthorizationLevel.Function, "get", "post", Route = null)]HttpRequest req, 
+        public static async Task Run([TimerTrigger("0 0 */4 * * *", RunOnStartup = false )]TimerInfo timer, 
                 [Table("AuditConfig")] CloudTable configTbl,
                 [Table("AuditStats")] CloudTable statsTbl,
                 [Table("ResourceTypes")] CloudTable invalidTypesTbl,
@@ -87,6 +87,13 @@ namespace TagSync.Functions
             foreach (var rg in resourceGroups)
             {
                 _log.Info("*** Resource Group: " + rg.Name);
+
+                if (rg.Tags == null)
+                {
+                    _log.Warning("Resource group: " + rg.Name + " does not have tags.");
+                    continue;
+                }
+
                 var tagsToSync = TagService.GetRequiredTags((Dictionary<string, string>)rg.Tags, requiredTagsList);
 
                 if (tagsToSync.Count < 1)
