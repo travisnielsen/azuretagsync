@@ -49,8 +49,7 @@ namespace TagSync.Services
                 {
                     itemTags = item.Tags.ToDictionary(x => x.Key, x=> x.Value);
                 }
-
-                resourceList.Add(new ResourceItem { Id = item.Id, Subscription = subscriptionId, Location = item.Location, Type = item.Type, Tags = itemTags, ApiVersion = await GetApiVersion(item.Type) });   
+                resourceList.Add(new ResourceItem { Id = item.Id, Subscription = subscriptionId, Location = item.Location, Type = item.Type, Tags = itemTags });
             }
 
             return resourceList;
@@ -65,8 +64,7 @@ namespace TagSync.Services
             await _client.Resources.UpdateByIdAsync(updateItem.Id, updateItem.ApiVersion, resource);
         }
 
-
-        async Task<string> GetApiVersion(string type)
+        public async Task<string> GetApiVersion(string type)
         {
             string resourceProvider = type.Split('/')[0];
             string resourceType = type.TrimStart(resourceProvider.ToCharArray()).TrimStart('/');

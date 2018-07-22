@@ -10,11 +10,11 @@ using TagSync.Services;
 
 namespace TagSync.Functions
 {
-    public static class SyncTags
+    public static class UpdateTags
     {
-        [FunctionName("SyncTags")]
+        [FunctionName("UpdateTags")]
         public static async Task Run([QueueTrigger("resources-to-tag", Connection = "AzureWebJobsStorage")]string myQueueItem,
-                    [Table("ResourceTypes")] CloudTable invalidResourceTable,
+                    [Table("ResourceTypes")] CloudTable resourceTypesTable,
                     TraceWriter log
                 )
         {
@@ -40,24 +40,14 @@ namespace TagSync.Functions
             {
                 log.Error(updateItem.Id + " failed with: " + ex.Message);
                 
-                InvalidTagResource matchingInvalidResource = null;
-                var invalidTagResourcesQuery = await invalidResourceTable.ExecuteQuerySegmentedAsync(new TableQuery<InvalidTagResource>(), null);
+                var resourceItemsQuery = await resourceTypesTable.ExecuteQuerySegmentedAsync(new TableQuery<ResourceType>(), null);
+                var resourceType = resourceItemsQuery.Results.Where(x => x.Type == updateItem.Type).FirstOrDefault();
 
-                if (invalidTagResourcesQuery.Results != null)
-                    matchingInvalidResource = invalidTagResourcesQuery.Results.Where(x => x.Type == updateItem.Type).FirstOrDefault();
-
-                if (matchingInvalidResource == null)
+                if (resourceType != null)
                 {
-                    InvalidTagResource invalidItem = new InvalidTagResource
-                    { 
-                        Type = updateItem.Type, 
-                        Message = ex.Message,
-                        RowKey = Guid.NewGuid().ToString(),
-                        PartitionKey = updateItem.Subscription
-                    };
-
-                    TableOperation insertOperation = TableOperation.InsertOrReplace(invalidItem);
-                    await invalidResourceTable.ExecuteAsync(insertOperation);
+                    resourceType.ErrorMessage = ex.Message;
+                    TableOperation insertOperation = TableOperation.InsertOrReplace(resourceType);
+                    await resourceTypesTable.ExecuteAsync(insertOperation);
                 }
             }
         }

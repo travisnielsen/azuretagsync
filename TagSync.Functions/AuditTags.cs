@@ -8,32 +8,31 @@ using System.Collections.Generic;
 using System.Threading.Tasks;
 using TagSync.Models;
 using TagSync.Services;
-using Microsoft.AspNetCore.Http;
-using Microsoft.Azure.WebJobs.Extensions.Http;
 
 namespace TagSync.Functions
 {
-    public static class AuditResourceGroups
+    public static class AuditTags
     {
-        static ICollector<string> _outQueue;
+        static CloudTable _resourceTypesTbl;
+        static List<ResourceType> _resourceTypes;
         static TraceWriter _log;
         static ResourceManagerService _resourceManager;
 
-        [FunctionName("AuditResourceGroups")]
-        public static async Task Run([TimerTrigger("0 0 */4 * * *", RunOnStartup = false )]TimerInfo timer, 
-                [Table("AuditConfig")] CloudTable configTbl,
-                [Table("AuditStats")] CloudTable statsTbl,
-                [Table("ResourceTypes")] CloudTable invalidTypesTbl,
-                [Queue("resources-to-tag")] ICollector<string> outQueue,
-                TraceWriter log
-            )
+        [FunctionName("AuditTags")]
+        public static async Task Run(
+            [TimerTrigger("0 0 */4 * * *", RunOnStartup = false )]TimerInfo timer, 
+            [Table("AuditConfig")] CloudTable configTbl,
+            [Table("AuditStats")] CloudTable statsTbl,
+            [Table("ResourceTypes")] CloudTable resourceTypesTbl,
+            [Queue("resources-to-tag")] ICollector<string> outQueue,
+            TraceWriter log )
         {
-            log.Info("C# HTTP trigger function processed a request.");
-
             _log = log;
-            _outQueue = outQueue;
+            _resourceTypesTbl = resourceTypesTbl;
             log.Info("Starding subscription audit.");
-            var invalidTagResourcesQuery = await invalidTypesTbl.ExecuteQuerySegmentedAsync(new TableQuery<InvalidTagResource>(), null);
+
+            var resourceTypesQuery = await resourceTypesTbl.ExecuteQuerySegmentedAsync(new TableQuery<ResourceType>(), null);
+            _resourceTypes = resourceTypesQuery.Results;
             var auditConfigQuery = await configTbl.ExecuteQuerySegmentedAsync(new TableQuery<AuditConfig>(), null);
 
             // Init config table if new deployment
@@ -63,7 +62,15 @@ namespace TagSync.Functions
                         log.Error("Unable to connect to the ARM API, Message: " + ex.Message);
                     }
 
-                    await ProcessResourceGroups(requiredTagsList, invalidTagResourcesQuery.Results, auditConfig.SubscriptionId, stats);
+                    List<ResourceItem> tagUpdates = await ProcessResourceGroups(requiredTagsList, auditConfig.SubscriptionId, stats);
+
+                    foreach(ResourceItem resourceItem in tagUpdates)
+                    {
+                        string messageText = JsonConvert.SerializeObject(resourceItem);
+                        _log.Info("Requesting tags for: " + resourceItem.Id);
+                        outQueue.Add(messageText);
+                    }
+
                     log.Info("Completed audit of subscription: " + auditConfig.SubscriptionId);
                     stats.JobEnd = DateTime.Now;
 
@@ -75,18 +82,19 @@ namespace TagSync.Functions
                     log.Error("Failure processing resource groups for auditConfig: " + auditConfig.RowKey);
                     log.Error(ex.Message);
                 }
-
             }
         }
 
-        static async Task ProcessResourceGroups(IEnumerable<string> requiredTagsList, List<InvalidTagResource> invalidTypes, string subscriptionId, AuditStats stats )
+        static async Task<List<ResourceItem>> ProcessResourceGroups(IEnumerable<string> requiredTagsList, string subscriptionId, AuditStats stats )
         {
+            List<ResourceItem> updateList = new List<ResourceItem>();
+            List<string> invalidResourceTypes = _resourceTypes.Where(t => !String.IsNullOrEmpty(t.ErrorMessage)).Select(t => t.Type).ToList();
             var resourceGroups = await _resourceManager.GetResourceGroups(subscriptionId);
             stats.ResourceGroupsTotal = resourceGroups.Count;
 
             foreach (var rg in resourceGroups)
             {
-                _log.Info("*** Resource Group: " + rg.Name);
+                _log.Info("Resource group: " + rg.Name);
 
                 if (rg.Tags == null)
                 {
@@ -103,7 +111,7 @@ namespace TagSync.Functions
                 }
                 else
                 {
-                    List<ResourceItem> resources = await _resourceManager.GetResources(rg.Name, subscriptionId, invalidTypes.Select(t => t.Type).ToList());
+                    List<ResourceItem> resources = await _resourceManager.GetResources(rg.Name, subscriptionId, invalidResourceTypes);
                     stats.ResourceItemsTotal = resources.Count();
 
                     foreach(var resource in resources)
@@ -112,11 +120,18 @@ namespace TagSync.Functions
 
                         if (result.Count > 0)
                         {
-                            stats.ResourceItemsWithUpdates += 1;
-                            resource.Tags = result;
-                            string messageText = JsonConvert.SerializeObject(resource);
-                            _log.Info("Requesting tags for: " + resource.Id);
-                            _outQueue.Add(messageText);
+                            try
+                            {
+                                stats.ResourceItemsWithUpdates += 1;
+                                resource.Tags = result;
+                                resource.ApiVersion = await GetApiVersion(resource);
+                                updateList.Add(resource);
+                            }
+                            catch(Exception ex)
+                            {
+                                _log.Error("Failure processing resource: " + resource.Id);
+                                _log.Error(ex.Message);
+                            }
                         }
                         else
                         {
@@ -125,7 +140,40 @@ namespace TagSync.Functions
                     }
                 }
             }
+
+            return updateList;
         }
 
+        static async Task<string> GetApiVersion(ResourceItem resource)
+        {
+            ResourceType matchingItem = _resourceTypes.Where(r => r.Type == resource.Type).FirstOrDefault();
+
+            if(matchingItem != null)
+            {
+                _log.Verbose("API version found in ResourceTypes table");
+                return matchingItem.ApiVersion;
+            }
+            else
+            {
+                string apiVersion = await _resourceManager.GetApiVersion(resource.Type);
+                if (!String.IsNullOrEmpty(apiVersion))
+                {
+                    _log.Verbose("Got API version from resource maanger service");
+                    await AddResourceType(resource, apiVersion);
+                    return apiVersion;
+                }
+                else
+                    throw new Exception("Unable to get API version");
+            }
+        }
+
+        static async Task AddResourceType(ResourceItem resource, string apiVersion)
+        {
+            var newResourceType = new ResourceType { ApiLocation = resource.Location, ApiVersion = apiVersion, Type = resource.Type, RowKey = Guid.NewGuid().ToString(), PartitionKey = "tagsync" };
+            _resourceTypes.Add(newResourceType);
+
+            TableOperation insertOperation = TableOperation.InsertOrReplace(newResourceType);
+            await _resourceTypesTbl.ExecuteAsync(insertOperation);
+        }
     }
 }
