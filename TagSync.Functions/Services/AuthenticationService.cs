@@ -10,7 +10,7 @@ namespace TagSync.Services
 {
     public static class AuthenticationService
     {
-        public static async Task<string> GetAccessTokenAsync()
+        public static string GetAccessTokenAsync()
         {
             string token = null;
 
@@ -38,8 +38,6 @@ namespace TagSync.Services
                 // USE MSI
                 try
                 {
-                    // var azureServiceTokenProvider = new AzureServiceTokenProvider();
-                    // token = await azureServiceTokenProvider.GetAccessTokenAsync("https://management.core.windows.net/");
                     return GetTokenMSI();
                 }
                 catch (Exception ex) { throw ex; }

@@ -54,7 +54,7 @@ namespace TagSync.Functions
 
                     try
                     {
-                        string token = await AuthenticationService.GetAccessTokenAsync();
+                        string token = AuthenticationService.GetAccessTokenAsync();
                         _resourceManager = new ResourceManagerService(token);
                     }
                     catch (Exception ex)
