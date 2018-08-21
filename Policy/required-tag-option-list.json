@@ -1,5 +1,5 @@
-Policy definition name: Require tag on resource groups and 
-Policy definition description: This policy template requires a certain tag to be provided for a resource group.  It must be provided when the resource group is created.
+Policy definition name: Require tag on resource groups and restrict possible values
+Policy definition description: This policy template requires a certain tag to be provided for a resource group.  It must be provided when the resource group is created.  You must also provide a list of possible values for the tag to be enforced.
 Policy definition category: Resource Group
 
 {
