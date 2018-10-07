@@ -1,7 +1,8 @@
 using Microsoft.Azure.WebJobs;
 using Microsoft.Azure.WebJobs.Host;
 using Microsoft.WindowsAzure.Storage.Table;
-using Newtonsoft.Json;
+using Microsoft.Azure.WebJobs.Extensions.Storage;
+using Newtonsoft.Json; 
 using System;
 using System.Linq;
 using System.Collections.Generic;
