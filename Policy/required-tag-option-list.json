@@ -1,0 +1,40 @@
+Policy definition name: Require tag on resource groups and restrict possible values
+Policy definition description: This policy template requires a certain tag to be provided for a resource group.  It must be provided when the resource group is created.  You must also provide a list of possible values for the tag to be enforced.
+Policy definition category: Resource Group
+
+{
+    "policyRule": {
+        "if": {
+            "allOf": [
+                {
+                    "field": "type",
+                    "equals": "Microsoft.Resources/subscriptions/resourceGroups"
+                },
+                {
+                    "not": {
+                        "field": "[concat('tags[', parameters('tagName'), ']')]",
+                        "in": "[parameters('listOfAllowedTagValues')]"
+                    }
+                }
+            ]
+        },
+        "then": {
+            "effect": "deny"
+        }
+    },
+    "parameters": {
+        "tagName": {
+            "type": "String",
+            "metadata": {
+                "description": "Name of the required tag"
+            }
+        },
+        "listOfAllowedTagValues": {
+            "type": "Array",
+            "metadata": {
+                "displayName": "Allowed tag values",
+                "description": "The list of allowed tag values"
+            }
+        }
+    }
+}
